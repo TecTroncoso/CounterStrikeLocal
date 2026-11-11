@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Counter-Strike 1.6 &mdash; Web</title>
+    <style>
+        :root {
+            --bg: #08090b;
+            --panel: rgba(15, 17, 21, 0.94);
+            --accent: #f5a623;
+            --accent-hot: #ff6b00;
+            --text: #f7f3ea;
+            --muted: #9aa0a6;
+            --line: rgba(255, 255, 255, 0.09);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        /* The engine renders the 3D view with a 4:3 aspect ratio and stretches
+           the edges to fill whatever the canvas is, so the canvas keeps the
+           classic ratio to avoid the distortion.  The exact size is set by
+           script: it has to match the window the engine creates, otherwise
+           the 2D layer (console, weapon) ends up offset. */
+        canvas {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #000000;
+            z-index: 1;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+            overflow: hidden;
+        }
+
+        /* ------------------------------------------------------------------
+           Pantalla de inicio
+           ------------------------------------------------------------------ */
+        #start-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            overflow-x: hidden;
+            overflow-y: auto;
+            padding: 20px 12px;
+            background:
+                radial-gradient(circle at 50% 12%, rgba(245, 166, 35, 0.18), transparent 46%),
+                radial-gradient(circle at 82% 88%, rgba(255, 107, 0, 0.10), transparent 42%),
+                var(--bg);
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        #start-screen::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+            background-size: 48px 48px;
+            -webkit-mask-image: radial-gradient(circle at center, #000 20%, transparent 78%);
+            mask-image: radial-gradient(circle at center, #000 20%, transparent 78%);
+            pointer-events: none;
+        }
+
+        #start-screen::after {
+            content: "CS";
+            /* Fixed, so the decoration never enlarges the scrollable area of
+               the start screen on small displays. */
+            position: fixed;
+            right: -3vw;
+            bottom: -9vw;
+            font: 900 30vw/1 "Arial Black", Impact, sans-serif;
+            letter-spacing: -0.09em;
+            color: rgba(255, 255, 255, 0.028);
+            pointer-events: none;
+        }
+
+        #start-screen.is-hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .start-panel {
+            position: relative;
+            z-index: 1;
+            /* The automatic margins centre the panel while there is room and
+               keep it scrollable from the top when the screen is short. */
+            margin: auto;
+            width: min(780px, calc(100vw - 32px));
+            max-width: 100%;
+            padding: 32px 38px 26px;
+            border: 1px solid rgba(245, 166, 35, 0.28);
+            border-radius: 18px;
+            background: linear-gradient(160deg, rgba(21, 23, 28, 0.94), rgba(9, 10, 12, 0.97));
+            box-shadow:
+                0 30px 90px rgba(0, 0, 0, 0.62),
+                0 0 0 1px rgba(255, 255, 255, 0.035) inset,
+                0 0 90px rgba(245, 166, 35, 0.08);
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+        }
+
+        .start-topline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 9px;
+            border: 1px solid rgba(245, 166, 35, 0.38);
+            border-radius: 999px;
+            background: rgba(245, 166, 35, 0.09);
+            color: #ffd28a;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .badge-muted {
+            border-color: var(--line);
+            background: rgba(255, 255, 255, 0.025);
+            color: var(--muted);
+        }
+
+        .start-title {
+            margin: 0 0 10px;
+            font: 900 clamp(38px, 7vw, 74px)/0.9 "Arial Black", Impact, sans-serif;
+            letter-spacing: -0.055em;
+            text-transform: uppercase;
+            color: var(--text);
+            text-shadow: 0 5px 34px rgba(0, 0, 0, 0.8);
+        }
+
+        .start-title .title-accent {
+            color: var(--accent);
+        }
+
+        .start-subtitle {
+            max-width: 620px;
+            margin: 0;
+            color: #c2c6cc;
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        .rotation-block {
+            margin: 24px 0 0;
+        }
+
+        .rotation-head {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 6px 12px;
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        .rotation-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .rotation-chip {
+            padding: 7px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            color: #b9bdc4;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+        }
+
+        .rotation-chip.active {
+            border-color: var(--accent);
+            background: rgba(245, 166, 35, 0.14);
+            color: #ffd28a;
+            box-shadow: 0 0 18px rgba(245, 166, 35, 0.14);
+        }
+
+        .rotation-chip.next {
+            border-color: rgba(245, 166, 35, 0.45);
+            color: #ffffff;
+        }
+
+        .rotation-chip.next::after {
+            content: " \2192";
+            color: var(--accent);
+        }
+
+        .start-actions {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+            margin-top: 24px;
+        }
+
+        #play-button {
+            flex: 1;
+            min-height: 56px;
+            border: 0;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #ffb52e, var(--accent-hot));
+            color: #120c02;
+            font: 900 18px/1 "Arial Black", Impact, sans-serif;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            box-shadow: 0 12px 30px rgba(255, 107, 0, 0.24);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+        }
+
+        #play-button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            filter: brightness(1.06);
+            box-shadow: 0 16px 42px rgba(255, 107, 0, 0.34);
+        }
+
+        #play-button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        #play-button:disabled {
+            background: #262a30;
+            color: #777d85;
+            cursor: progress;
+            box-shadow: none;
+        }
+
+        .ghost-button {
+            width: 56px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            color: #ffffff;
+            font-size: 20px;
+            cursor: pointer;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .ghost-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .progress-block {
+            margin-top: 20px;
+        }
+
+        .progress-track {
+            height: 8px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #ffb52e, var(--accent-hot));
+            box-shadow: 0 0 18px rgba(255, 107, 0, 0.4);
+            transition: width 0.15s ease-out;
+        }
+
+        .progress-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .start-footer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 22px;
+            padding-top: 14px;
+            border-top: 1px solid var(--line);
+            color: #777d85;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .error-box {
+            padding: 18px;
+            border: 1px solid rgba(255, 86, 86, 0.35);
+            border-radius: 10px;
+            background: rgba(255, 86, 86, 0.08);
+            color: #ffb4b4;
+            font-size: 14px;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        /* ------------------------------------------------------------------
+           HUD dentro de la partida
+           ------------------------------------------------------------------ */
+        #game-hud {
+            position: fixed;
+            inset: 0;
+            z-index: 5;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 16px;
+            pointer-events: none;
+        }
+
+        #game-hud.hidden {
+            display: none;
+        }
+
+        .hud-block {
+            min-width: 116px;
+            padding: 8px 11px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: rgba(8, 9, 11, 0.62);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+        }
+
+        .hud-kicker {
+            display: block;
+            margin-bottom: 3px;
+            color: var(--accent);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+        }
+
+        .hud-block strong {
+            font-size: 13px;
+            letter-spacing: 0.03em;
+        }
+
+        .hud-next {
+            margin-left: auto;
+        }
+
+        .hud-controls {
+            position: absolute;
+            left: 50%;
+            bottom: 16px;
+            transform: translateX(-50%);
+            padding: 7px 12px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(8, 9, 11, 0.55);
+            color: #b9bdc4;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+        }
+
+        .hud-button {
+            position: absolute;
+            right: 16px;
+            bottom: 16px;
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: rgba(8, 9, 11, 0.62);
+            color: #ffffff;
+            font-size: 18px;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .hud-button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* ------------------------------------------------------------------
+           Aviso de cambio de mapa
+           ------------------------------------------------------------------ */
+        .toast {
+            position: fixed;
+            top: 22px;
+            left: 50%;
+            z-index: 20;
+            padding: 12px 18px;
+            border: 1px solid rgba(245, 166, 35, 0.42);
+            border-radius: 10px;
+            background: rgba(10, 11, 13, 0.92);
+            color: #ffd28a;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            opacity: 0;
+            pointer-events: none;
+            transform: translate(-50%, -14px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        /* ------------------------------------------------------------------
+           Transición entre mapas
+           ------------------------------------------------------------------ */
+        .map-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            display: grid;
+            place-items: center;
+            background: rgba(4, 5, 7, 0.66);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+
+        .map-overlay.hidden {
+            display: none;
+        }
+
+        .map-overlay-card {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: min(420px, calc(100vw - 40px));
+            padding: 24px 28px;
+            border: 1px solid rgba(245, 166, 35, 0.34);
+            border-radius: 14px;
+            background: linear-gradient(160deg, rgba(21, 23, 28, 0.97), rgba(9, 10, 12, 0.98));
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), 0 0 60px rgba(245, 166, 35, 0.08);
+            text-align: center;
+        }
+
+        .map-overlay-card strong {
+            font: 900 24px/1.1 "Arial Black", Impact, sans-serif;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+        }
+
+        .map-overlay-card > span:last-child {
+            color: var(--muted);
+            font-size: 12px;
+            letter-spacing: 0.04em;
+        }
+
+        @media (max-width: 600px) {
+            .start-panel {
+                padding: 24px 20px 20px;
+            }
+
+            .start-title {
+                font-size: clamp(30px, 12vw, 50px);
+            }
+
+            .start-actions {
+                flex-direction: column;
+            }
+
+            .ghost-button {
+                width: 100%;
+                height: 44px;
+            }
+
+            .start-footer {
+                font-size: 10px;
+            }
+
+            #game-hud {
+                padding: 10px;
+                gap: 6px;
+            }
+
+            .hud-block {
+                min-width: 0;
+                padding: 7px 9px;
+            }
+
+            .hud-controls {
+                display: none;
+            }
+        }
+    </style>
+    <link rel="preload" href="./valve-parts/manifest.json" as="fetch">
+    <link rel="preload" href="./vendor/jszip/jszip.min.js?v=3.10.1" as="script">
+    <link rel="modulepreload" href="./vendor/xash3d-fwgs/generated/xash.js?v=1.2.1">
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="game-hud" class="hidden" aria-hidden="true">
+    <div class="hud-block">
+        <span class="hud-kicker">MAPA ACTUAL</span>
+        <strong id="hud-map">de_dust2</strong>
+    </div>
+    <div class="hud-block">
+        <span class="hud-kicker">ESCUADRÓN</span>
+        <strong id="hud-squad">9 BOTS + TÚ</strong>
+    </div>
+    <div class="hud-block hud-next">
+        <span class="hud-kicker">SIGUIENTE</span>
+        <strong id="hud-next">de_inferno</strong>
+    </div>
+    <div class="hud-controls">WASD · Mouse · R · B · Tab</div>
+    <button id="fullscreen-button" class="hud-button" type="button" title="Pantalla completa">⛶</button>
+</div>
+
+<div id="start-screen">
+    <div class="start-panel">
+        <div class="start-topline">
+            <span class="badge">WEB EDITION</span>
+            <span class="badge badge-muted">LOCAL · SIN SERVIDOR</span>
+        </div>
+
+        <h1 class="start-title">COUNTER<span class="title-accent">-</span>STRIKE <span class="title-accent">1.6</span></h1>
+        <p class="start-subtitle" id="start-subtitle">
+            9 bots contra ti. Rotación automática de mapas al ganar la ronda. Todo corre en tu navegador,
+            sin servidores ni latencia.
+        </p>
+
+        <div class="rotation-block">
+            <div class="rotation-head">
+                <span>ROTACIÓN DE MAPAS</span>
+                <span id="rotation-status">1 ronda por mapa</span>
+            </div>
+            <div id="rotation-list" class="rotation-list"></div>
+        </div>
+
+        <div class="start-actions">
+            <button id="play-button" type="button" disabled>
+                <span id="play-label">CARGANDO...</span>
+            </button>
+            <button id="start-fullscreen" class="ghost-button" type="button" title="Pantalla completa">⛶</button>
+        </div>
+
+        <div class="progress-block">
+            <div class="progress-track"><div id="progress-bar"></div></div>
+            <div class="progress-meta">
+                <span id="loading-label">Cargando recursos...</span>
+                <span id="progress-percent">0%</span>
+            </div>
+        </div>
+
+        <div id="error-box" class="error-box" hidden></div>
+
+        <div class="start-footer">
+            <span>WASD mover · Mouse apuntar · R recargar · B comprar · Tab marcador</span>
+            <span>Los recursos se descargan una sola vez.</span>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div id="map-overlay" class="map-overlay hidden" aria-live="polite">
+    <div class="map-overlay-card">
+        <span class="hud-kicker">ROTACIÓN AUTOMÁTICA</span>
+        <strong id="map-overlay-title">Cambiando de mapa...</strong>
+        <span id="map-overlay-sub">Preparando la siguiente ronda</span>
+    </div>
+</div>
+
+<script src="./config.js"></script>
+<script type="module">
+    import Xash from './vendor/xash3d-fwgs/generated/xash.js?v=1.2.1';
+import { createLoopbackNet } from './loopback-net.js';
+
+    // `config.js` lets a deployment point the archive at another origin
+    // (for example an R2 bucket) without touching this file.  The local
+    // default keeps `python scripts/serve.py` working out of the box.
+    const configuredPartsBase = globalThis.CS16_CONFIG?.partsBaseUrl;
+    const partsBase = typeof configuredPartsBase === 'string' && configuredPartsBase.trim()
+        ? configuredPartsBase.trim()
+        : './valve-parts/';
+    const partsBaseUrl = new URL(partsBase, document.baseURI);
+    if (!partsBaseUrl.pathname.endsWith('/')) partsBaseUrl.pathname += '/';
+    // The archive is a directory; a query or hash on the base would end up in
+    // the middle of every part URL.
+    partsBaseUrl.search = '';
+    partsBaseUrl.hash = '';
+    const VALVE_PARTS_BASE_URL = partsBaseUrl.href;
+
+    // Rotación de mapas.  El motor lee `cstrike/mapcycle.txt`, que se genera
+    // a partir de esta lista antes de arrancar el primer mapa.  Solo se usan
+    // mapas que existen en el archivo: un mapa ausente aborta el cambio.
+    const MAP_ROTATION = [
+        'de_dust2',
+        'de_inferno',
+        'de_aztec',
+        'de_nuke',
+        'de_train',
+        'de_cbble',
+        'de_prodigy',
+        'cs_office',
+        'cs_italy',
+        'de_dust',
+    ];
+
+    const KNOWN_MAPS = new Set([
+        'as_oilrig', 'cs_747', 'cs_assault', 'cs_backalley', 'cs_estate',
+        'cs_havana', 'cs_italy', 'cs_militia', 'cs_office', 'cs_siege',
+        'de_airstrip', 'de_aztec', 'de_cbble', 'de_chateau', 'de_dust',
+        'de_dust2', 'de_inferno', 'de_nuke', 'de_piranesi', 'de_prodigy',
+        'de_storm', 'de_survivor', 'de_torn', 'de_train', 'de_vertigo',
+    ]);
+
+    const DEFAULT_MAP = MAP_ROTATION[0];
+    const DEFAULT_BOTS = 9;
+    const DEFAULT_MAXPLAYERS = 10;
+    const DEFAULT_DIFFICULTY = 2;
+
+    function readInt(value, fallback, min, max) {
+        const parsed = Number.parseInt(value ?? '', 10);
+        if (!Number.isFinite(parsed)) return fallback;
+        return Math.min(max, Math.max(min, parsed));
+    }
+
+// Fallback for the vendored runtime files.  The versions are pinned to the
+// ones `scripts/fetch-vendor.py` installs: the engine and the CS 1.6
+// libraries have to match each other.  Bump these constants (and the
+// `?v=` on the xash.js import at the top of this module) whenever a package
+// is updated: the immutable cache header on /vendor/ is only safe while the
+// URL changes.
+const XASH_VERSION = '1.2.1';
+const CS16_VERSION = '0.1.2';
+const JSZIP_VERSION = '3.10.1';
+const XASH_BASE = './vendor/xash3d-fwgs/';
+const CS16_BASE = './vendor/cs16-client/cstrike/';
+const JSZIP_LOCAL = `./vendor/jszip/jszip.min.js?v=${JSZIP_VERSION}`;
+const CDN_CS16 = `https://cdn.jsdelivr.net/npm/cs16-client@${CS16_VERSION}/dist/cstrike`;
+const CDN_JSZIP = `https://cdn.jsdelivr.net/npm/jszip@${JSZIP_VERSION}/dist/jszip.min.js`;
+
+    const GAME_ARGS = ['-windowed', '-game', 'cstrike'];
+    const query = new URLSearchParams(location.search);
+
+    const requestedMapParam = (query.get('map') || '').trim().toLowerCase();
+    const requestedMap = KNOWN_MAPS.has(requestedMapParam) ? requestedMapParam : DEFAULT_MAP;
+    const botCount = readInt(query.get('bots'), DEFAULT_BOTS, 0, 15);
+    const requestedMaxPlayers = readInt(query.get('maxplayers'), DEFAULT_MAXPLAYERS, 2, 16);
+    const maxPlayers = Math.min(16, Math.max(requestedMaxPlayers, botCount + 1, 2));
+    const difficulty = readInt(query.get('difficulty'), DEFAULT_DIFFICULTY, 0, 3);
+    const autostart = query.get('autostart') !== '0';
+
+    // Four parallel parts saturate most connections without buffering too
+    // many 8 MiB chunks at once on phones.  Desktops with enough memory can
+    // use six; `?parallel=1..8` overrides the choice either way.
+    function defaultPartConcurrency() {
+        const coarsePointer = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
+        const deviceMemory = Number(navigator.deviceMemory) || 4;
+        const effectiveType = navigator.connection?.effectiveType ?? '';
+        if (coarsePointer || deviceMemory <= 4 || effectiveType === 'slow-2g' || effectiveType === '2g') {
+            return 4;
+        }
+        return 6;
+    }
+
+    const MAX_CONCURRENT_PART_DOWNLOADS = readInt(query.get('parallel'), defaultPartConcurrency(), 1, 8);
+
+    // The published client library does not include the native VGUI menu, so
+    // `B` falls back to the tap-only touch menu.  Its numeric keys end up
+    // sending `menuselect`, which the server ignores while `_vgui_menus` is
+    // enabled, and the menu closes instead of navigating.  Desktop therefore
+    // uses the classic menu, where the number keys navigate and buy.  Touch
+    // devices keep the touch menu because it is the only usable one there.
+    // `?classic=1` forces the classic menu and `?classic=0` the touch menu.
+    function shouldUseClassicMenus() {
+        const classicParam = query.get('classic');
+        if (classicParam !== null) return classicParam !== '0';
+        return !(window.matchMedia?.('(pointer: coarse)')?.matches ?? false);
+    }
+
+    const useClassicMenus = shouldUseClassicMenus();
+
+    function buildRotationOrder(startMap) {
+        const index = MAP_ROTATION.indexOf(startMap);
+        if (index >= 0) {
+            return [...MAP_ROTATION.slice(index), ...MAP_ROTATION.slice(0, index)];
+        }
+        return [startMap, ...MAP_ROTATION.filter((map) => map !== startMap)];
+    }
+
+    const rotationOrder = buildRotationOrder(requestedMap);
+
+    // `?developer=2` turns on the engine's verbose logging: 1 enables
+    // developer messages, 2 also enables the extended reports.  Level 1 is
+    // the default because the page reads the level-change messages.
+    const developerLevel = query.get('developer');
+    GAME_ARGS.push('-dev', developerLevel || '1');
+
+    // --- Escalado dinámico de resolución -----------------------------------
+    //
+    // El motor dibuja la escena 3D en una ventana de su propio tamaño; el
+    // canvas se muestra a otro tamaño (el que cabe en la ventana del
+    // navegador) y el navegador escala la imagen.  Renderizar por debajo del
+    // tamaño final reduce el fill rate, que es lo que ahoga a las GPUs
+    // integradas y a los móviles.
+    //
+    // `?scale=0.7` fija la escala; `?scale=auto` (por defecto) la ajusta sola
+    // según el tiempo entre frames.
+    const SCALE_STEPS = [1, 0.85, 0.7, 0.6, 0.5];
+
+    const resolution = {
+        em: null,
+        css: { width: 0, height: 0 },
+        scale: 1,
+        step: 0,
+        fixed: null,
+        samples: [],
+        // Refresh rate of the display, measured while the game is idle.
+        display: 0,
+        measuring: true,
+        started: 0,
+        last: 0,
+        lastChange: 0,
+        over: 0,
+        under: 0,
+        lastDown: 0,
+    };
+
+    const ui = {
+        _toastTimer: 0,
+        _lastProgress: -1,
+
+        updateProgress(percent) {
+            const clamped = Math.min(100, Math.max(0, percent));
+            const rounded = Math.round(clamped);
+            // The download loop calls this for every chunk and the extraction
+            // loop for every file.  A 1% step cuts thousands of layout and
+            // text updates down to at most a hundred.
+            if (rounded === this._lastProgress) return;
+            this._lastProgress = rounded;
+            const bar = document.getElementById('progress-bar');
+            if (bar) bar.style.width = `${rounded}%`;
+            const label = document.getElementById('progress-percent');
+            if (label) label.textContent = `${rounded}%`;
+        },
+        setLabel(text) {
+            const label = document.getElementById('loading-label');
+            if (label) label.textContent = text;
+        },
+        setPlayLabel(text) {
+            const label = document.getElementById('play-label');
+            if (label) label.textContent = text;
+        },
+        setReady() {
+            const button = document.getElementById('play-button');
+            if (button) button.disabled = false;
+            ui.setPlayLabel('JUGAR');
+        },
+        updateSquad(count) {
+            const squad = document.getElementById('hud-squad');
+            if (squad) squad.textContent = count === 0 ? 'SOLO TÚ' : `${count} BOTS + TÚ`;
+        },
+        hideStartScreen() {
+            const screen = document.getElementById('start-screen');
+            if (!screen) return;
+            screen.classList.add('is-hidden');
+            screen.setAttribute('aria-hidden', 'true');
+        },
+        showHud() {
+            const hud = document.getElementById('game-hud');
+            if (!hud) return;
+            hud.classList.remove('hidden');
+            hud.setAttribute('aria-hidden', 'false');
+        },
+        renderRotation(activeMap, nextMap) {
+            const list = document.getElementById('rotation-list');
+            if (!list) return;
+            list.innerHTML = '';
+            for (const map of rotationOrder) {
+                const chip = document.createElement('span');
+                chip.className = 'rotation-chip';
+                chip.textContent = map;
+                if (map === activeMap) chip.classList.add('active');
+                if (map === nextMap) chip.classList.add('next');
+                list.appendChild(chip);
+            }
+        },
+        updateMap(map, nextMap) {
+            const current = document.getElementById('hud-map');
+            if (current) current.textContent = map;
+            const next = document.getElementById('hud-next');
+            if (next) next.textContent = nextMap;
+            ui.renderRotation(map, nextMap);
+        },
+        showToast(text, duration = 3200) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.textContent = text;
+            toast.classList.add('show');
+            clearTimeout(ui._toastTimer);
+            ui._toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+        },
+        showMapOverlay(title, subtitle) {
+            const overlay = document.getElementById('map-overlay');
+            if (!overlay) return;
+            const titleEl = document.getElementById('map-overlay-title');
+            const subEl = document.getElementById('map-overlay-sub');
+            if (titleEl) titleEl.textContent = title;
+            if (subEl) subEl.textContent = subtitle;
+            overlay.classList.remove('hidden');
+        },
+        hideMapOverlay() {
+            const overlay = document.getElementById('map-overlay');
+            if (overlay) overlay.classList.add('hidden');
+        },
+        fail(error) {
+            console.error('Falha ao carregar Counter-Strike 1.6:', error);
+            const box = document.getElementById('error-box');
+            if (box) {
+                box.hidden = false;
+                box.textContent = `No se pudo cargar el juego: ${error?.message || error}. Recarga la página para intentar de nuevo.`;
+            }
+            const button = document.getElementById('play-button');
+            if (button) button.disabled = true;
+            ui.setPlayLabel('ERROR');
+            ui.setLabel('Error de carga');
+            ui.updateProgress(0);
+            ui.hideMapOverlay();
+        },
+    };
+
+    const match = {
+        em: null,
+        started: false,
+        ready: false,
+        serial: 0,
+        configuredSerial: 0,
+        activeMap: requestedMap,
+        configureTimer: 0,
+        botTimer: 0,
+        autoStartTimer: 0,
+        autoStartRemaining: 0,
+    };
+
+    function nextMapFor(map) {
+        const index = rotationOrder.indexOf(map);
+        if (index < 0) return rotationOrder[0];
+        return rotationOrder[(index + 1) % rotationOrder.length];
+    }
+
+    // Competitive CS 1.6 format: MR15 (30 rounds max, first to 16 wins the
+    // map). The win limit stays at 0 until the human joins a team, otherwise
+    // a bot round could change the map while the start screen is still up.
+    function setMatchRules(winlimit) {
+        if (!match.em) return;
+        exec(match.em, `mp_winlimit ${winlimit}`);
+        exec(match.em, 'mp_maxrounds 30');
+        exec(match.em, 'mp_timelimit 0');
+    }
+
+    function joinHumanTeam() {
+        if (!match.em) return;
+        const serial = match.serial;
+        exec(match.em, 'jointeam 1');
+        setTimeout(() => {
+            if (match.em && match.serial === serial) exec(match.em, 'joinclass 1');
+        }, 450);
+        // The touch menu can stay open after the automatic team join.  It is
+        // closed once so it does not cover the view; B opens it whenever the
+        // player wants to buy something.  The classic menu does not need
+        // this, and closing it here could race with a player who presses B
+        // right after spawning.
+        if (!useClassicMenus) {
+            setTimeout(() => {
+                if (match.em && match.serial === serial) exec(match.em, 'client_buy_close');
+            }, 1600);
+        }
+    }
+
+    // Removes every bot from the server.  A level change keeps the old bots
+    // connected, so they have to be dropped before the new line-up can be
+    // created.  `bot_kick` queues the kicks for the next server frame, which
+    // is why the new bots are only added a moment later.
+    function clearBots() {
+        if (!match.em) return;
+        exec(match.em, 'bot_quota 0');
+        exec(match.em, 'bot_kick');
+    }
+
+    function configureMatch(serial) {
+        if (!match.em || serial !== match.serial) return;
+        if (match.configuredSerial === serial) return;
+        match.configuredSerial = serial;
+
+        // A level change restarts the server, so the bots have to be added
+        // again.  The rules are applied first, then the line-up is rebuilt
+        // once the engine has freed the slots of the previous map.
+        exec(match.em, 'bot_quota_mode normal');
+        exec(match.em, 'bot_join_after_player 0');
+        exec(match.em, 'bot_auto_vacate 0');
+        exec(match.em, 'bot_defer_to_human 0');
+        exec(match.em, `bot_difficulty ${difficulty}`);
+        exec(match.em, 'mp_autoteambalance 0');
+        exec(match.em, 'mp_limitteams 0');
+        setMatchRules(0);
+        clearBots();
+
+        clearTimeout(match.botTimer);
+        match.botTimer = setTimeout(() => {
+            if (!match.em || match.serial !== serial) return;
+
+            // Half of the bots on each side; the human always joins the
+            // terrorists, so the match is a fair 5 against 5.
+            const ctBots = Math.ceil(botCount / 2);
+            const tBots = Math.floor(botCount / 2);
+            for (let index = 0; index < ctBots; index++) exec(match.em, 'bot_add_ct');
+            for (let index = 0; index < tBots; index++) exec(match.em, 'bot_add_t');
+            exec(match.em, `bot_quota ${botCount}`);
+
+            match.ready = true;
+            const next = nextMapFor(match.activeMap);
+            ui.updateMap(match.activeMap, next);
+            ui.updateSquad(botCount);
+            ui.updateProgress(100);
+            ui.setLabel('Listo. Los bots están esperando.');
+            ui.setReady();
+
+            if (match.started) {
+                // The player is back in team selection after a level change.
+                // Rejoin automatically, then arm the win limit.
+                setTimeout(() => {
+                    if (match.serial !== serial || !match.started) return;
+                    joinHumanTeam();
+                    setTimeout(() => {
+                        if (match.serial !== serial || !match.started) return;
+                        setMatchRules(16);
+                    }, 900);
+                    ui.hideMapOverlay();
+                }, 1400);
+            } else if (autostart) {
+                startAutoStart();
+            }
+        }, 900);
+    }
+
+    function startAutoStart() {
+        if (!autostart || match.started || match.autoStartTimer) return;
+        match.autoStartRemaining = 3;
+        ui.setPlayLabel(`ENTRANDO EN ${match.autoStartRemaining}...`);
+        match.autoStartTimer = setInterval(() => {
+            match.autoStartRemaining -= 1;
+            if (match.autoStartRemaining <= 0) {
+                cancelAutoStart();
+                beginMatch(false);
+            } else {
+                ui.setPlayLabel(`ENTRANDO EN ${match.autoStartRemaining}...`);
+            }
+        }, 1000);
+    }
+
+    function cancelAutoStart() {
+        if (match.autoStartTimer) {
+            clearInterval(match.autoStartTimer);
+            match.autoStartTimer = 0;
+        }
+        ui.setPlayLabel('JUGAR');
+    }
+
+    function requestPointerLock() {
+        const canvas = document.getElementById('canvas');
+        if (!canvas?.requestPointerLock) return;
+        try {
+            const result = canvas.requestPointerLock();
+            if (result?.catch) {
+                result.catch(() => ui.showToast('Haz clic en la pantalla para capturar el ratón', 5000));
+            }
+        } catch (error) {
+            ui.showToast('Haz clic en la pantalla para capturar el ratón', 5000);
+        }
+    }
+
+    function toggleFullscreen() {
+        if (document.fullscreenElement) {
+            document.exitFullscreen?.().catch(() => {});
+            return;
+        }
+        document.documentElement.requestFullscreen?.().catch(() => {
+            ui.showToast('Pantalla completa no disponible en este navegador', 3000);
+        });
+    }
+
+    function beginMatch(userGesture) {
+        if (!match.ready || match.started) return;
+        match.started = true;
+        cancelAutoStart();
+        ui.hideStartScreen();
+        ui.showHud();
+        ui.updateMap(match.activeMap, nextMapFor(match.activeMap));
+
+        joinHumanTeam();
+        const serial = match.serial;
+        setTimeout(() => {
+            if (match.serial === serial && match.started) setMatchRules(16);
+        }, 1400);
+
+        if (userGesture) {
+            requestPointerLock();
+        } else {
+            ui.showToast('Haz clic en la pantalla para capturar el ratón', 5000);
+        }
+    }
+
+    function handleEngineLog(line) {
+        if (line.includes('Changing maps...')) {
+            match.ready = false;
+            if (match.started) {
+                ui.showMapOverlay('Cambiando de mapa...', 'Ronda ganada · rotación automática');
+                ui.showToast('Ronda ganada · siguiente mapa', 3500);
+            }
+            return;
+        }
+
+        const spawn = line.match(/Spawn Server:\s*(\S+)/);
+        if (spawn) {
+            match.activeMap = spawn[1];
+            match.serial += 1;
+            match.ready = false;
+            clearTimeout(match.configureTimer);
+            clearTimeout(match.botTimer);
+            // The bots of the previous map are still connected while the
+            // server restarts.  Dropping the quota right away stops the
+            // engine from trying to top it up on a full server.
+            if (match.em) exec(match.em, 'bot_quota 0');
+            const next = nextMapFor(match.activeMap);
+            ui.updateMap(match.activeMap, next);
+            if (match.started) {
+                ui.showMapOverlay(`Cargando ${match.activeMap}...`, `Siguiente: ${next}`);
+            }
+            // The client connection line normally arrives right after this.
+            // This is only a fallback for a missing line.
+            const serial = match.serial;
+            match.configureTimer = setTimeout(() => configureMatch(serial), 6000);
+            return;
+        }
+
+        if (line.includes('client connected')) {
+            const serial = match.serial;
+            clearTimeout(match.configureTimer);
+            match.configureTimer = setTimeout(() => configureMatch(serial), 1400);
+        }
+    }
+
+    // Every runtime dependency is vendored under ./vendor and committed, so
+    // the client uses the local copy directly.  The CDN is only a fallback
+    // for `extras.pk3` and JSZip when a checkout is missing vendor/.
+    // (A HEAD probe per asset used to add a needless round trip before every
+    // download; the files are part of the deployment.)
+
+    // JSZip ships as a UMD bundle, so it has to be loaded as a classic
+    // script and read from the global scope.
+    function loadClassicScript(local, cdn) {
+        return new Promise((resolve, reject) => {
+            const attempt = (src, fallback) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => resolve(globalThis.JSZip);
+                script.onerror = () => {
+                    if (!fallback) {
+                        reject(new Error(`Falha ao carregar ${src}`));
+                        return;
+                    }
+                    attempt(fallback, null);
+                };
+                document.head.appendChild(script);
+            };
+            attempt(local, cdn);
+        });
+    }
+
+    async function sha256Hex(bytes) {
+        if (!globalThis.crypto?.subtle) return null;
+        const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+        return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+
+    const PART_DOWNLOAD_ATTEMPTS = 3;
+    const RETRY_BASE_DELAY = 600;
+
+    function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function loadValveArchive() {
+        ui.setLabel('Baixando os recursos do jogo...');
+        // `_headers` marks the manifest as `no-cache`, so the browser still
+        // revalidates it on every visit; `default` lets it reuse the preload
+        // instead of starting a second request.
+        const manifestRes = await fetch(`${VALVE_PARTS_BASE_URL}manifest.json`, { cache: 'default' });
+        if (!manifestRes.ok) {
+            throw new Error(`Não foi possível carregar o manifesto do valve.zip (${manifestRes.status})`);
+        }
+
+        const manifest = await manifestRes.json();
+        if (!manifest.archiveSize || !manifest.partSize || !manifest.parts?.length) {
+            throw new Error('Manifesto do valve.zip inválido');
+        }
+
+        const manifestSize = manifest.parts.reduce((sum, part) => sum + part.size, 0);
+        if (manifestSize !== manifest.archiveSize) {
+            throw new Error('O tamanho das partes não corresponde ao manifesto');
+        }
+
+        const partBlobs = new Array(manifest.parts.length);
+        // Each worker reports the bytes of the part it is downloading.  The
+        // sum is the real progress: retries reset their part to zero instead
+        // of counting the failed attempt twice.
+        const partProgress = new Array(manifest.parts.length).fill(0);
+        let nextPart = 0;
+        let hashUnavailable = false;
+        let aborted = false;
+
+        function updateDownloadProgress() {
+            const downloadedBytes = partProgress.reduce((sum, value) => sum + value, 0);
+            ui.updateProgress(5 + (downloadedBytes / manifest.archiveSize) * 45);
+        }
+
+        async function downloadPart(part, partIndex) {
+            let lastError = null;
+
+            for (let attempt = 1; attempt <= PART_DOWNLOAD_ATTEMPTS; attempt++) {
+                let receivedBytes = 0;
+                try {
+                    // The hash in the query string makes the URL immutable:
+                    // a changed part is a new URL, so the browser can keep it
+                    // for a year without risking a stale copy.
+                    const version = part.sha256 ? `?v=${part.sha256.slice(0, 12)}` : '';
+                    const partRes = await fetch(
+                        `${VALVE_PARTS_BASE_URL}${encodeURIComponent(part.file)}${version}`,
+                        { cache: 'default' },
+                    );
+                    if (!partRes.ok) {
+                        throw new Error(`Falha ao carregar ${part.file} (${partRes.status})`);
+                    }
+
+                    const chunks = [];
+                    const reader = partRes.body?.getReader();
+                    if (reader) {
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            chunks.push(value);
+                            receivedBytes += value.byteLength;
+                            partProgress[partIndex] = receivedBytes;
+                            updateDownloadProgress();
+                        }
+                    } else {
+                        const value = new Uint8Array(await partRes.arrayBuffer());
+                        chunks.push(value);
+                        receivedBytes = value.byteLength;
+                        partProgress[partIndex] = receivedBytes;
+                        updateDownloadProgress();
+                    }
+
+                    if (receivedBytes !== part.size) {
+                        throw new Error(`Tamanho inesperado em ${part.file}`);
+                    }
+
+                    const blob = new Blob(chunks, { type: 'application/octet-stream' });
+                    if (part.sha256) {
+                        if (!globalThis.crypto?.subtle) {
+                            hashUnavailable = true;
+                        } else {
+                            const partHash = await sha256Hex(await blob.arrayBuffer());
+                            if (partHash !== part.sha256) {
+                                throw new Error(`A verificação SHA-256 falhou em ${part.file}`);
+                            }
+                        }
+                    }
+
+                    partProgress[partIndex] = part.size;
+                    updateDownloadProgress();
+                    return blob;
+                } catch (error) {
+                    lastError = error;
+                    partProgress[partIndex] = 0;
+                    updateDownloadProgress();
+                    if (attempt >= PART_DOWNLOAD_ATTEMPTS) break;
+                    ui.setLabel(`Reintentando ${part.file} (${attempt + 1}/${PART_DOWNLOAD_ATTEMPTS})...`);
+                    await sleep(RETRY_BASE_DELAY * attempt);
+                }
+            }
+
+            aborted = true;
+            throw lastError;
+        }
+
+        async function downloadWorker() {
+            while (!aborted) {
+                const partIndex = nextPart++;
+                if (partIndex >= manifest.parts.length) return;
+                partBlobs[partIndex] = await downloadPart(manifest.parts[partIndex], partIndex);
+            }
+        }
+
+        await Promise.all(
+            Array.from(
+                { length: Math.min(MAX_CONCURRENT_PART_DOWNLOADS, manifest.parts.length) },
+                downloadWorker,
+            ),
+        );
+        ui.updateProgress(55);
+
+        // On plain HTTP (for example a phone on the LAN) the Web Crypto API
+        // is unavailable and the parts cannot be verified.  Say it instead of
+        // skipping the check silently; HTTPS enables it.
+        if (hashUnavailable) {
+            ui.showToast('Aviso: el navegador no puede verificar SHA-256 en HTTP. Usa HTTPS para validar las partes.', 8000);
+        }
+
+        return new Blob(partBlobs, { type: 'application/zip' });
+    }
+
+    // The vendored paths are versioned so the immutable cache header on
+    // `/vendor/*` stays correct across package updates.  A package bump only
+    // has to change XASH_VERSION / CS16_VERSION above.
+    function resolveLibraries() {
+        return {
+            xash: `${XASH_BASE}xash.wasm?v=${XASH_VERSION}`,
+            filesystem: `${XASH_BASE}filesystem_stdio.wasm?v=${XASH_VERSION}`,
+            menu: `${CS16_BASE}cl_dlls/menu_emscripten_wasm32.wasm?v=${CS16_VERSION}`,
+            client: `${CS16_BASE}cl_dlls/client_emscripten_wasm32.wasm?v=${CS16_VERSION}`,
+            server: `${CS16_BASE}dlls/cs_emscripten_wasm32.wasm?v=${CS16_VERSION}`,
+            renderer: `${XASH_BASE}libref_webgl2.wasm?v=${XASH_VERSION}`,
+            extras: `${CS16_BASE}extras.pk3?v=${CS16_VERSION}`,
+        };
+    }
+
+    async function loadExtras(local) {
+        try {
+            // The versioned URL is immutable, so `default` lets returning
+            // visitors reuse the 24 MiB file instead of revalidating it.
+            const response = await fetch(local, { cache: 'default' });
+            if (response.ok) return response.arrayBuffer();
+            console.warn(`extras.pk3 local indisponível (${response.status}), usando o CDN.`);
+        } catch (error) {
+            console.warn('extras.pk3 local indisponível, usando o CDN.', error);
+        }
+
+        const response = await fetch(`${CDN_CS16}/extras.pk3`);
+        if (!response.ok) {
+            throw new Error(`Não foi possível carregar extras.pk3 (${response.status})`);
+        }
+        return response.arrayBuffer();
+    }
+
+    async function main() {
+        ui.updateProgress(5);
+        ui.updateSquad(botCount);
+        ui.updateMap(requestedMap, nextMapFor(requestedMap));
+
+        const rotationStatus = document.getElementById('rotation-status');
+        if (rotationStatus) {
+            rotationStatus.textContent = `${botCount} bots · 1 ronda por mapa`;
+        }
+
+        const subtitle = document.getElementById('start-subtitle');
+        if (subtitle) {
+            subtitle.textContent = `${botCount} bots contra ti. Rotación automática de mapas al ganar la ronda. Todo corre en tu navegador, sin servidores ni latencia.`;
+        }
+
+        document.getElementById('play-button')?.addEventListener('click', () => beginMatch(true));
+        for (const id of ['start-fullscreen', 'fullscreen-button']) {
+            document.getElementById(id)?.addEventListener('click', toggleFullscreen);
+        }
+
+        // The vendor modules and extras.pk3 are independent of the archive,
+        // so start them now instead of appending ~28 MiB after the 261 MiB
+        // download.  On a high-latency link this hides the extra round trips.
+        const libraries = resolveLibraries();
+        const extrasPromise = loadExtras(libraries.extras);
+        // Mark an early rejection as handled; it is awaited below and still
+        // reported to the user.
+        extrasPromise.catch(() => {});
+        const jszipPromise = loadClassicScript(JSZIP_LOCAL, CDN_JSZIP);
+        // The rejection is reported by Promise.all after the archive finishes;
+        // mark it handled so the browser does not log it in the meantime.
+        jszipPromise.catch(() => {});
+
+        let archiveBlob = await loadValveArchive();
+        ui.updateProgress(55);
+
+        let [JSZip, extras] = await Promise.all([jszipPromise, extrasPromise]);
+        ui.setLabel('Descompactando os recursos...');
+        let zip = await JSZip.loadAsync(archiveBlob);
+        ui.updateProgress(70);
+
+        // Library names are the keys the engine asks the loader for; the
+        // values point at the vendored WASM binaries.  The game library is
+        // requested with a different extension depending on the engine build:
+        // 1.2.1 looks for `dlls/cs_emscripten_wasm32.so`, 1.2.2 for the
+        // `.wasm` variant.
+        const filesMap = {
+            'xash.wasm': libraries.xash,
+            'filesystem_stdio.wasm': libraries.filesystem,
+            '/rodir/filesystem_stdio.wasm': libraries.filesystem,
+            'cl_dlls/menu_emscripten_wasm32.wasm': libraries.menu,
+            'cl_dlls/client_emscripten_wasm32.wasm': libraries.client,
+            'dlls/hl_emscripten_wasm32.wasm': libraries.server,
+            'dlls/cs_emscripten_wasm32.wasm': libraries.server,
+            'dlls/cs_emscripten_wasm32.so': libraries.server,
+            'libref_webgl2.wasm': libraries.renderer,
+        };
+
+        const engineLogs = [];
+        // The engine needs a socket layer.  Without one it cannot even open
+        // the network for a local game, so the packets are looped back inside
+        // the page.
+        const net = createLoopbackNet();
+        const canvas = document.getElementById('canvas');
+        fitCanvas(canvas);
+        canvas.addEventListener('click', () => {
+            if (document.pointerLockElement !== canvas) requestPointerLock();
+        });
+
+        // `?scale=0.7` pins the render scale, `?scale=auto` lets the page
+        // adjust it to the measured frame time.
+        const scaleParam = query.get('scale');
+        if (scaleParam && scaleParam !== 'auto') {
+            const value = Number(scaleParam);
+            if (value > 0 && value <= 1) {
+                resolution.fixed = value;
+                resolution.scale = value;
+                resolution.step = SCALE_STEPS.findIndex((step) => step <= value);
+                if (resolution.step < 0) resolution.step = SCALE_STEPS.length - 1;
+            }
+        }
+
+        // The engine takes the size of the canvas when it creates its window,
+        // so the render scale is applied right after the boot through the
+        // `width` and `height` cvars (see applyScale).
+        const engineArgs = [
+            '-ref', 'webgl2',
+            ...GAME_ARGS,
+        ];
+        const em = await Xash({
+            canvas,
+            arguments: engineArgs,
+            net,
+            // The engine dlopens the game library by its exact name, so the
+            // library has to be preloaded under that name: a side module that
+            // is only reachable through `locateFile` cannot be loaded
+            // synchronously when the server starts.  Each side module must be
+            // listed exactly once, or the duplicated instantiation breaks the
+            // shared function table.
+            dynamicLibraries: [
+                'filesystem_stdio.wasm',
+                // The engine also opens the filesystem module by its absolute
+                // path once the game directory is known.
+                '/rodir/filesystem_stdio.wasm',
+                'cl_dlls/menu_emscripten_wasm32.wasm',
+                'dlls/cs_emscripten_wasm32.so',
+                'cl_dlls/client_emscripten_wasm32.wasm',
+                'libref_webgl2.wasm',
+            ],
+            locateFile: (path) => filesMap[path] ?? path,
+            print: (log) => {
+                const line = String(log);
+                engineLogs.push(line);
+                console.log(line);
+                handleEngineLog(line);
+                // Loading a map is not a frame time: those samples would drop
+                // the resolution for no reason.
+                if (line.includes('Spawn Server:') || line.includes('client connected')) {
+                    resolution.samples.length = 0;
+                    resolution.lastChange = performance.now();
+                }
+            },
+            printErr: (log) => {
+                const line = String(log);
+                engineLogs.push(line);
+                console.error(line);
+            },
+        });
+
+        match.em = em;
+
+        // Exposed for debugging from the browser console.
+        window.__cs16 = {
+            em,
+            engineLogs,
+            filesMap,
+            net,
+            resolution,
+            match,
+            rotationOrder,
+            // Which menu mode was chosen and why; handy when a device picks
+            // the wrong one.
+            menus: { classic: useClassicMenus, shouldUseClassic: shouldUseClassicMenus },
+        };
+
+        net.attach(em);
+        resolution.em = em;
+
+        // The engine opens the game directory as soon as its `main` runs, so
+        // every asset has to be in the virtual filesystem before that.
+        ui.setLabel('Escrevendo os recursos no disco virtual...');
+        const fileKeys = Object.keys(zip.files).filter(path => !zip.files[path].dir);
+        for (let index = 0; index < fileKeys.length; index++) {
+            const path = fileKeys[index];
+            const target = `/rodir/${path}`;
+            const bytes = await zip.files[path].async('uint8array');
+            const dir = target.split('/').slice(0, -1).join('/');
+            em.FS.mkdirTree(dir);
+            // JSZip hands us a fresh array per entry; letting MEMFS take
+            // ownership avoids a second copy of every file.
+            em.FS.writeFile(target, bytes, { canOwn: true });
+            ui.updateProgress(70 + ((index + 1) / fileKeys.length) * 25);
+            if (index % 64 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+        }
+
+        em.FS.writeFile('/rodir/cstrike/extras.pk3', new Uint8Array(extras), { canOwn: true });
+
+        // The game DLL treats mapcycle.txt as a queue: the first map in the
+        // file is the first level change, regardless of the current map.
+        // Shift the rotation by one so the first change goes to the map after
+        // the requested one, and the queue wraps back to it after the last.
+        const mapcycleOrder = rotationOrder.length > 1
+            ? [...rotationOrder.slice(1), rotationOrder[0]]
+            : rotationOrder;
+        em.FS.writeFile('/rodir/cstrike/mapcycle.txt', `${mapcycleOrder.join('\n')}\n`);
+
+        // The cvar has to exist before the client library initialises, so it
+        // is injected into config.cfg instead of being set from the command
+        // line.
+        const configOverrides = [];
+        // The engine ships with a one player server ("maxplayers 1"), so a
+        // local game has no free slot for the bots.  The cvar is latched: it
+        // has to be set before the server starts.  Every slot costs memory and
+        // the WebAssembly heap does not grow, so the amount is limited.
+        configOverrides.push(`maxplayers ${maxPlayers}`);
+        // The engine keeps the developer log in the browser console, but the
+        // on-screen console notify would sit on top of the HUD.  Hide it; the
+        // messages still reach the page through the print callback.
+        configOverrides.push('con_notifytime 0');
+        if (useClassicMenus) configOverrides.push('_vgui_menus 0');
+        if (configOverrides.length) {
+            try {
+                const config = em.FS.readFile('/rodir/cstrike/config.cfg', { encoding: 'utf8' });
+                em.FS.writeFile('/rodir/cstrike/config.cfg', `${config}\n${configOverrides.join('\n')}\n`);
+            } catch (error) {
+                console.warn('Não foi possível ajustar o config.cfg.', error);
+            }
+        }
+
+        // `zip` keeps the 261 MiB archive buffer alive and `archiveBlob` is
+        // another reference to it; extras is 24 MiB.  Drop all three before
+        // the engine starts allocating map and model data.
+        archiveBlob = null;
+        zip = null;
+        extras = null;
+
+        em.FS.mkdir('/rwdir');
+        em.FS.chdir('/rodir');
+
+        ui.updateProgress(96);
+        ui.setLabel('Iniciando el motor...');
+
+        em.start();
+        ui.updateProgress(97);
+        ui.setLabel('Cargando el mapa...');
+
+        // From here on the page watches the frame time and lowers the render
+        // scale when the engine cannot keep up with the display.
+        resolution.started = performance.now();
+        requestAnimationFrame(watchFrameTime);
+
+        // A fixed scale is applied right away; the automatic one waits for the
+        // first measurement.
+        if (resolution.fixed !== null && resolution.scale < 1) {
+            setTimeout(() => applyScale(resolution.scale), 1000);
+        }
+
+        window.addEventListener('resize', debounce(() => {
+            fitCanvas(canvas);
+            applyScale(resolution.scale);
+        }, 250));
+
+        // The engine is up but the client library is still initialising, so
+        // the map is requested a moment later and retried until the engine
+        // acknowledges it.  The bots are added by configureMatch when the
+        // client connects, on the first map and after every level change.
+        startMap(em, requestedMap);
+    }
+
+    // Runs a console command inside the engine.
+    function exec(em, cmd) {
+        try {
+            em.Module.ccall('Cmd_ExecuteString', null, ['string'], [cmd]);
+            return true;
+        } catch (error) {
+            console.error(`[cs16] falha ao executar "${cmd}":`, error);
+            return false;
+        }
+    }
+
+    // Waits for the given time before running the callback.
+    function debounce(callback, delay) {
+        let timer = 0;
+        return () => {
+            clearTimeout(timer);
+            timer = setTimeout(callback, delay);
+        };
+    }
+
+    // The engine draws the 3D view with a 4:3 aspect ratio and stretches the
+    // edges to fill the canvas, so the canvas keeps that ratio.  The size has
+    // to be a whole number of pixels: the engine window and the canvas
+    // drawing buffer have to match exactly, otherwise the 2D layer (console,
+    // weapon) is drawn at the wrong offset.
+    function fitCanvas(canvas) {
+        let width = Math.floor(window.innerHeight * 4 / 3);
+        let height = Math.floor(window.innerWidth * 3 / 4);
+
+        if (width > window.innerWidth) {
+            width = window.innerWidth;
+        } else {
+            height = Math.floor(width * 3 / 4);
+        }
+
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        resolution.css = { width, height };
+        return resolution.css;
+    }
+
+    // Size the engine renders at, given the scale.
+    function renderSize(scale) {
+        return {
+            width: Math.max(320, Math.round(resolution.css.width * scale)),
+            height: Math.max(240, Math.round(resolution.css.height * scale)),
+        };
+    }
+
+    // Applies a render scale to the engine window.  The browser keeps
+    // stretching the result to the size of the canvas.
+    //
+    // The size has to be applied through the `width` and `height` cvars: they
+    // are FCVAR_VIDRESTART, so the engine re-applies the video mode and
+    // resizes the canvas.  `vid_mode` does nothing in the WebAssembly build.
+    function applyScale(scale) {
+        if (!resolution.em) return;
+
+        const { width, height } = renderSize(scale);
+        resolution.scale = scale;
+        exec(resolution.em, `width ${width}`);
+        exec(resolution.em, `height ${height}`);
+        console.log(`[cs16] render ${width}x${height} (escala ${scale.toFixed(2)})`);
+    }
+
+    // Watches the time between frames and drops the render scale when the
+    // engine cannot keep up (and raises it again when there is headroom).
+    function watchFrameTime() {
+        requestAnimationFrame((now) => {
+            const delta = resolution.last ? now - resolution.last : 0;
+            resolution.last = now;
+
+            if (resolution.measuring) {
+                // The first frames only show the menu: their interval is the
+                // refresh rate of the display, which is the reference to know
+                // how fast the engine is allowed to be.
+                if (delta > 0 && delta < 100) {
+                    resolution.display = resolution.display
+                        ? Math.min(resolution.display, delta)
+                        : delta;
+                }
+                if (now - resolution.started > 2500) resolution.measuring = false;
+            } else if (delta > 0 && delta < 500 && now - resolution.lastChange > 1500) {
+                // The frames right after a resize are slow because of it.
+                resolution.samples.push({ at: now, delta });
+                if (resolution.samples.length > 90) resolution.samples.shift();
+            }
+
+            if (resolution.fixed === null && !resolution.measuring && resolution.samples.length >= 30) {
+                adjustScale(now);
+            }
+            requestAnimationFrame(watchFrameTime);
+        });
+    }
+
+    function adjustScale(now) {
+        if (now - resolution.lastChange < 2000) return;
+
+        // Only the frames of the last seconds count: a map load or a garbage
+        // collection must not lower the resolution of the next minutes.
+        const recent = resolution.samples.filter((sample) => now - sample.at < 3000);
+        if (recent.length < 20) return;
+
+        const sorted = recent.map((sample) => sample.delta).sort((a, b) => a - b);
+        // The median ignores the odd spike (a map load, a garbage collection)
+        // but follows a sustained slowdown.
+        const frame = sorted[Math.floor(sorted.length * 0.5)];
+        // The engine may take half again the refresh rate before it is worth
+        // dropping the resolution.
+        const target = Math.max(resolution.display * 1.5, 1000 / 40);
+
+        if (frame > target) {
+            resolution.over += 1;
+            resolution.under = 0;
+        } else if (frame < resolution.display * 1.1) {
+            resolution.under += 1;
+            resolution.over = 0;
+        } else {
+            resolution.over = 0;
+            resolution.under = 0;
+        }
+
+        // Two consecutive measurements to drop the scale, four to raise it,
+        // and a long pause after a drop: the resolution should settle on the
+        // lowest one that still keeps up instead of oscillating.
+        const raised = performance.now() - resolution.lastDown > 30000;
+        if (resolution.over >= 2 && resolution.step < SCALE_STEPS.length - 1) {
+            resolution.step += 1;
+            resolution.lastDown = performance.now();
+        } else if (raised && resolution.under >= 4 && resolution.step > 0) {
+            resolution.step -= 1;
+        } else {
+            return;
+        }
+
+        resolution.over = 0;
+        resolution.under = 0;
+        resolution.lastChange = now;
+        resolution.samples.length = 0;
+        applyScale(SCALE_STEPS[resolution.step]);
+    }
+
+    function startMap(em, map) {
+        const command = `map ${map}`;
+        let attempts = 0;
+
+        // The client library is not ready right after the engine starts, so
+        // the command is repeated until the server accepts it.  The retry
+        // stops as soon as the map is up: running `map` again would restart
+        // the level and drop the connection.
+        const attempt = () => {
+            attempts += 1;
+            const ok = exec(em, command);
+            console.log(`[cs16] executando "${command}" (tentativa ${attempts}, ok=${ok})`);
+            if (attempts >= 5) return;
+
+            setTimeout(() => {
+                // Running `map` again would restart the level, so the command
+                // is only repeated when the engine says it did not start.
+                // "Spawn Server" only shows up with ?developer, but the team
+                // selection of the client means the server is up.
+                const log = window.__cs16.engineLogs;
+                const started = log.some((line) => line.includes('Spawn Server:'))
+                    || log.some((line) => line.includes('touch/chooseteam.cfg'));
+                if (started) {
+                    console.log('[cs16] mapa carregado');
+                    return;
+                }
+                attempt();
+            }, 3000);
+        };
+        setTimeout(attempt, 5000);
+    }
+
+    main().catch((error) => ui.fail(error));
+</script>
+</body>
+</html>

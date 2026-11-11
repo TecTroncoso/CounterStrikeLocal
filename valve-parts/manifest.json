@@ -1,0 +1,170 @@
+{
+  "source": "https://github.com/TecTroncoso/CounterStrikeLocal/tree/main/valve-parts",
+  "archive": "valve.zip",
+  "archiveSize": 260572367,
+  "archiveSha256": "554cdd37bcf50e3a13d472bb016428ab237b7124b5619a52add08de38e7f16aa",
+  "partSize": 8388608,
+  "partCount": 32,
+  "parts": [
+    {
+      "file": "valve.part-000",
+      "size": 8388608,
+      "sha256": "ae088b27696ad5e0f0604d9d6db527d1ac25d2d46dbc92703ed469fd3805e5b0"
+    },
+    {
+      "file": "valve.part-001",
+      "size": 8388608,
+      "sha256": "1ce948b3e7be0faea96fd908b5fe13c892ad7d243c041e70fc48c0cfd2d39383"
+    },
+    {
+      "file": "valve.part-002",
+      "size": 8388608,
+      "sha256": "148a86bab874854c9084010904771ef9d5c719dd9c2b4d4a9aa0bdb344fe92db"
+    },
+    {
+      "file": "valve.part-003",
+      "size": 8388608,
+      "sha256": "0a8d5669fdc6e9109454524d494e937c6dda9e51fa38973c62a4b517fd3ee4f8"
+    },
+    {
+      "file": "valve.part-004",
+      "size": 8388608,
+      "sha256": "53b9af98554432fa3b3db9d5906399ed3f3a5324e70226130fbfb239788765e2"
+    },
+    {
+      "file": "valve.part-005",
+      "size": 8388608,
+      "sha256": "0b7fed96ccdb0c79421cd250f2dc6b99e7839242b8f8953dbe64924a5da72272"
+    },
+    {
+      "file": "valve.part-006",
+      "size": 8388608,
+      "sha256": "f2527adc5e9d37e9df0726016817831f9e833a81f3412ac82dec632f2fadb16f"
+    },
+    {
+      "file": "valve.part-007",
+      "size": 8388608,
+      "sha256": "eda8e84169c639700cf4951fca356f1c0e1d7a36e049abb0ea111f0e54521c0e"
+    },
+    {
+      "file": "valve.part-008",
+      "size": 8388608,
+      "sha256": "418c8d0ed3033e3908b92049c4dbcd43ecca0b7ca39f3daf5f215e91ad32ba2e"
+    },
+    {
+      "file": "valve.part-009",
+      "size": 8388608,
+      "sha256": "62af675bea93bfb92a78db434208626378f1a540da4b9c9bf2609cee1aa3fb84"
+    },
+    {
+      "file": "valve.part-010",
+      "size": 8388608,
+      "sha256": "a848ace91ca20b2b6f5aa861bdf53ddefe302e20416a11057c4f47c6bfa91689"
+    },
+    {
+      "file": "valve.part-011",
+      "size": 8388608,
+      "sha256": "6091700a65dddc33fce2ff5b325a34676db7bdc3cefdd6924fd74e1ccadecc07"
+    },
+    {
+      "file": "valve.part-012",
+      "size": 8388608,
+      "sha256": "142a9da7617e804c3c0eae81ae99aa0c45e2c47898fe82c61f3de2d86f568942"
+    },
+    {
+      "file": "valve.part-013",
+      "size": 8388608,
+      "sha256": "e9de1c4bca79158bcb4ce1dde6619c488d9b99f9bcce52017bc91e1324e4b332"
+    },
+    {
+      "file": "valve.part-014",
+      "size": 8388608,
+      "sha256": "5c121c6302e5fba383f8db7763b1cfc57159296bf3b372533ad9095f9944318f"
+    },
+    {
+      "file": "valve.part-015",
+      "size": 8388608,
+      "sha256": "6322b3cfa1b8e7e15b40c03a15dabb4e2c3c7edd21607730fbea6d6200961932"
+    },
+    {
+      "file": "valve.part-016",
+      "size": 8388608,
+      "sha256": "ba1c5808d80633834af08462c2d60f00dbc7250e7a0bde1a4a0bb1fbcdf3a0c0"
+    },
+    {
+      "file": "valve.part-017",
+      "size": 8388608,
+      "sha256": "e460f72c9b733469a05728374d4b0c8bd58954c7bfa0a81fa6f4ad15c6ae2fdd"
+    },
+    {
+      "file": "valve.part-018",
+      "size": 8388608,
+      "sha256": "4b428e60d4b17bdcc956e0dc81d5f6049208197d13db55e01e24c126a5175334"
+    },
+    {
+      "file": "valve.part-019",
+      "size": 8388608,
+      "sha256": "4eda00360d7a2e0ad2fd4ca28b9717f962fc30d3189caf6d0644eb5cc1ab803f"
+    },
+    {
+      "file": "valve.part-020",
+      "size": 8388608,
+      "sha256": "4d14078cd0e751746f089c0e432da4f7c5ed82f09f0d2f5ca79decc2b368c32a"
+    },
+    {
+      "file": "valve.part-021",
+      "size": 8388608,
+      "sha256": "d7ff8291a88551d3f23de303857d995494050a7332114d3c408b61f40ff02578"
+    },
+    {
+      "file": "valve.part-022",
+      "size": 8388608,
+      "sha256": "e4b725863da3248042a607052b5b5844140308b11470ef123e50c45d1e37b1dc"
+    },
+    {
+      "file": "valve.part-023",
+      "size": 8388608,
+      "sha256": "fd034fcfb14f6f903b72570b73f1be74055ec9b2ad6c91dc02b9d0f011ea8718"
+    },
+    {
+      "file": "valve.part-024",
+      "size": 8388608,
+      "sha256": "d97b0208332653a989104429af00d70344e3db54e208dcb22838c564539a31eb"
+    },
+    {
+      "file": "valve.part-025",
+      "size": 8388608,
+      "sha256": "1371f9c36948272cf850a8a670f5bda47479653b11f9cfab0a9d87aaa5a05676"
+    },
+    {
+      "file": "valve.part-026",
+      "size": 8388608,
+      "sha256": "4cf4038473f7c915722d9cc2737f5264e927cb49ae4de76dda860ecc46fe957b"
+    },
+    {
+      "file": "valve.part-027",
+      "size": 8388608,
+      "sha256": "f6047b0ad0342ba0221a4e61f95ac231b29462c66014df78de29c9dc210c8b24"
+    },
+    {
+      "file": "valve.part-028",
+      "size": 8388608,
+      "sha256": "c0b5bc791c1b8e4eac575fff9a5840f0343ad8d9f9497e7cd4ea655cd8049bdf"
+    },
+    {
+      "file": "valve.part-029",
+      "size": 8388608,
+      "sha256": "b02111183a165f0da3f6f4f57a7a51fec54714ce798df68cf7b1202e3129fe36"
+    },
+    {
+      "file": "valve.part-030",
+      "size": 8388608,
+      "sha256": "bd7a4d0ebef9c127aa8bf130c3f6f5922bae46d70fe05664fe315447d1a44713"
+    },
+    {
+      "file": "valve.part-031",
+      "size": 525519,
+      "sha256": "691accc6df1c6dc2260b8a5412a488f45a9583d5b25d5931b363da52f554ca33"
+    }
+  ]
+}

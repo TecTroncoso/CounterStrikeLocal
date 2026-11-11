@@ -1,0 +1,44 @@
+# Intermediate archive: only used to regenerate valve-parts/, never served.
+# valve-parts/ and vendor/ are committed so a fresh clone works as-is.
+valve.zip
+
+# Local deployment configuration and build output
+.env
+.env.*
+!.env.example
+.dev.vars
+dist/
+.wrangler/
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Logs and temporary files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.bak
+*.swp
+
+# Local Windows launcher, not part of the project
+bash.bat
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

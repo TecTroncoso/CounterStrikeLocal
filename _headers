@@ -1,0 +1,40 @@
+# Cloudflare Pages headers.
+#
+# The archive parts are immutable and their URLs carry the SHA-256 prefix, so
+# a changed part is a new URL.  The manifest, index and runtime config stay
+# revalidatable to pick up new deployments immediately.
+#
+# The /vendor/ files are also immutable, but only because index.html puts the
+# package version in the URL (`?v=1.2.1`, `?v=0.1.2`).  Bump those constants
+# when scripts/fetch-vendor.py installs a newer package.
+
+/valve-parts/valve.part-*
+  Cache-Control: public, max-age=31536000, immutable
+
+/valve-parts/manifest.json
+  Cache-Control: no-cache
+
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/vendor/*.wasm
+  Content-Type: application/wasm
+
+/
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/config.js
+  Cache-Control: no-cache
+
+/loopback-net.js
+  Cache-Control: no-cache
+
+/favicon.ico
+  Cache-Control: public, max-age=604800
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
